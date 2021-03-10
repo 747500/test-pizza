@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ru">
+	<head>
+		<meta charset="utf-8">
+		<title>pizza</title>
+
+		<style media="screen">
+
+#app {
+	width: 50rem;
+	display: flex;
+}
+
+.list-container {
+	flex: 1;
+}
+
+ul#ingredients {
+	list-style-type: '+ ';
+}
+
+ul#pizza {
+	list-style-type: '- ';
+}
+
+ul.selector li {
+	cursor: pointer;
+}
+
+ul.selector li:hover {
+	color: darkred;
+}
+		</style>
+
+	</head>
+	<body>
+
+		<div id="app">
+
+			<div class="list-container">
+				<div class="list-header">Ингредиенты</div>
+				<ul id="ingredients" class="selector">
+				</ul>
+			</div>
+
+
+			<div class="list-container">
+				<div class="list-header">Выбрано</div>
+				<ul id="pizza" class="selector">
+				</ul>
+				<div>
+					<input id="pizzaName" disabled type="text" />
+					<button id="pizzaSubmit" disabled>Сохранить</button>
+				</div>
+			</div>
+
+
+		</div>
+
+		<script type="text/javascript">
+
+
+	const ingredients = document.getElementById('ingredients')
+	const pizza = document.getElementById('pizza')
+	const pizzaSubmit = document.getElementById('pizzaSubmit')
+	const pizzaName = document.getElementById('pizzaName')
+
+	ingredients.onclick = event => {
+		if ('li' !== event.target.localName) {
+			return
+		}
+
+		const itemId = event.target.dataset.id
+		const itemText = event.target.innerText
+		console.log(itemId, itemText)
+
+		const list = pizza.querySelectorAll(`li[data-id="${itemId}"]`)
+
+		var li;
+		if (0 === list.length) {
+			li = document.createElement('li')
+			const dataId = document.createAttribute('data-Id')
+			dataId.value = itemId
+			const dataCount = document.createAttribute('data-count')
+			dataCount.value = 0
+			const dataText = document.createAttribute('data-text')
+			dataText.value = itemText
+			li.setAttributeNode(dataId)
+			li.setAttributeNode(dataCount)
+			li.setAttributeNode(dataText)
+			pizza.append(li)
+		}
+		else {
+			li = list[0]
+		}
+
+		li.dataset.count ++
+		li.innerText = `${li.dataset.text}: ${li.dataset.count}`
+
+		pizzaName.disabled = !pizza.children.length
+		pizzaSubmit.disabled = !(pizzaName.value.length && pizza.children.length)
+	}
+
+	pizza.onclick = event => {
+		if ('li' !== event.target.localName) {
+			return
+		}
+
+		const li = event.target
+
+		if (1 < li.dataset.count) {
+			li.dataset.count --
+			li.innerText = `${li.dataset.text}: ${li.dataset.count}`
+		}
+		else {
+			li.remove()
+		}
+
+		pizzaName.disabled = 0 === pizza.children.length
+		pizzaSubmit.disabled = !(pizzaName.value.length && pizza.children.length)
+	}
+
+	pizzaSubmit.onclick = event => {
+
+		//pizza.children
+		const data = {
+			name: pizzaName.value,
+			ingredients: []
+		}
+
+		for (let i = 0; i < pizza.children.length; i ++) {
+			data.ingredients.push({
+				_id: pizza.children[i].dataset.id,
+				count: pizza.children[i].dataset.count
+			})
+		}
+
+		var xhr = new XMLHttpRequest()
+		xhr.open('POST', '/api/pizza', true)
+		xhr.setRequestHeader('Content-Type', 'application/json')
+		xhr.send(JSON.stringify(data))
+		xhr.onreadystatechange = () => { // (3)
+			if (xhr.readyState !== 4) {
+				return;
+			}
+
+			if (xhr.status !== 200) {
+				console.error('xhr', xhr.status, xhr.statusText)
+				return;
+			}
+
+			pizzaSubmit.disabled = true
+		}
+	}
+
+	pizzaName.oninput = event => {
+		pizzaSubmit.disabled = !(pizzaName.value.length && pizza.children.length)
+	}
+
+	var xhr = new XMLHttpRequest()
+
+	xhr.open('GET', '/api/ingredients', true)
+
+	xhr.onreadystatechange = () => { // (3)
+		if (xhr.readyState !== 4) {
+			return;
+		}
+
+		if (xhr.status !== 200) {
+			console.error('xhr', xhr.status, xhr.statusText)
+			return;
+		}
+
+		const list = JSON.parse(xhr.responseText)
+
+		list.forEach((item, i) => {
+			const li = document.createElement('li')
+			const dataId = document.createAttribute('data-id')
+			dataId.value = item._id
+			li.setAttributeNode(dataId)
+			li.append(item.text)
+			ingredients.append(li)
+		});
+
+	}
+
+	xhr.send()
+
+		</script>
+
+	</body>
+</html>
