@@ -87,6 +87,7 @@ const server = http.createServer((req, res) => {
 	if ('POST' === req.method && '/api/pizza' === req.url) {
 		req.on('end', () => {
 			console.log('* new custom pizza: ', JSON.parse(postData.join()))
+			sendJson(req, res, { status: 'Ok' })
 		})
 	}
 	else {
