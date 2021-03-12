@@ -5,41 +5,36 @@ import fs from 'fs'
 
 import Router from './router.mjs'
 
-function send5xx (req, res, err) {
-
-	res.writeHead(500, {
-	  'Content-Type': 'text/plain'
-	})
-
-
-	res.end(err.toString())
-
-}
-
-function send404 (req, res, err) {
-
-	res.writeHead(404, {
-	  'Content-Type': 'text/plain'
-	})
-
-
-	res.end('File Not Found')
-
-}
-
 function sendJson (req, res, data) {
 
 	res.writeHead(200, {
 	  'Content-Type': 'application/json'
 	})
 
-
 	res.end(JSON.stringify(data, false, 2))
-
 }
 
 const router = new Router()
 
+router.last((req, res) => {
+
+	res.writeHead(404, {
+	  'Content-Type': 'text/plain'
+	})
+
+	res.end('File Not Found')
+})
+
+router.error((req, res, err) => {
+
+	res.writeHead(500, {
+	  'Content-Type': 'text/plain'
+	})
+
+	res.end(err.toString())
+})
+
+// logger
 router.use((req, res, next) => {
 	res.on('finish', () => {
 		console.log(
@@ -53,6 +48,7 @@ router.use((req, res, next) => {
 	next()
 })
 
+// POST data "parser"
 router.post((req, res, next) => {
 
 	req.postData = []
@@ -70,8 +66,7 @@ router.get('/', (req, res, next) => {
 
 	fs.readFile('public/index.html', (err, data) => {
 		if (err) {
-			console.error(err)
-			send5xx(req, res, err)
+			next(err)
 			return
 		}
 
@@ -80,8 +75,6 @@ router.get('/', (req, res, next) => {
 		})
 
 		res.end(data)
-
-		return
 	})
 })
 
@@ -94,7 +87,6 @@ router.get('/api/ingredients', (req, res, next) => {
 		{ _id: 4, text: 'Лук' },
 		{ _id: 5, text: 'Ананас' },
 	])
-
 })
 
 router.post('/api/pizza', (req, res, next) => {
@@ -103,11 +95,6 @@ router.post('/api/pizza', (req, res, next) => {
 		console.log('* new custom pizza: ', JSON.parse(req.postData.join()))
 		sendJson(req, res, { status: 'Ok' })
 	})
-
-})
-
-router.last((req, res) => {
-	send404(req, res)
 })
 
 const server = http.createServer((req, res) => router.match(req, res))

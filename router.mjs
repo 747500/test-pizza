@@ -1,43 +1,32 @@
 
-
-const methods = [
-	'get',
-	'post',
-	'put',
-	'delete'
-]
-
 function Router () {
 
-	console.log('* Router this', this)
-
-	methods.forEach(method => {
+	[
+		'get',
+		'post',
+		'put',
+		'delete',
+		// ...
+	].forEach(method => {
 		this[method] = (... args) => {
-			this.addRoute({
-				method,
-				middleware: args.pop() || null,
-				url: args.pop() || null
-			})
+			const middleware = args.pop() || null
+			const url = args.pop() || null
+			this.use(method, url, middleware)
 		}
 	})
-
-	this.use = (... args) => {
-		this.addRoute({
-			method: null,
-			middleware: args.pop() || null,
-			url: args.pop() || null
-		})
-	}
 
 }
 
 Router.prototype = {
 
-	list: [],
+	routes: [],
 
-	addRoute (obj) {
-		console.log('* addRoute', obj)
-		this.list.push(obj)
+	use (... args) {
+		this.routes.push({
+			middleware: args.pop() || null,
+			url: args.pop() || null,
+			method: args.pop() || null,
+		})
 	},
 
 	matchMethod (item, req) {
@@ -51,36 +40,40 @@ Router.prototype = {
 		return null === item.url || item.url === req.url
 	},
 
-	match (req, res) {
+	matchRoutes (req) {
 
-		req.list = []
+		const list = []
 
-		this.list.forEach(item => {
+		this.routes.forEach(item => {
 			if (this.matchMethod(item, req) && this.matchUrl(item, req)) {
-				req.list.push(item)
+				list.push(item)
 			}
 		})
 
-		//console.log('! req', req)
+		return list
+	},
+
+	match (req, res) {
+
+		const list = this.matchRoutes(req)
 
 		const next = err => {
-			const item = req.list.shift()
+
+			if (err) {
+				this.http5xx(req, res, err)
+				return
+			}
+
+			const item = list.shift()
+
 			if (item) {
-				if (item.middleware) {
-					item.middleware(req, res, next)
-				}
-				else {
-					next()
-				}
+				item.middleware(req, res, next)
 			}
 			else {
-				if (this.http404) {
-					this.http404(req, res)
-					return
-				}
-				console.log('? 404')
+				this.http404(req, res)
 			}
 		}
+
 		next()
 
 	},
@@ -89,6 +82,9 @@ Router.prototype = {
 		this.http404 = middleware
 	},
 
+	error (middleware) {
+		this.http5xx = middleware
+	},
 }
 
 export default Router
