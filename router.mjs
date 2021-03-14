@@ -1,4 +1,35 @@
 
+// -------------------------------------------------------------------------
+
+function Route (... args) {
+	this.middleware = args.pop() || null
+	this.url = args.pop() || null
+	this.method = args.pop() || null
+}
+
+Route.prototype = {
+	method: null,
+	url: null,
+	middleware: null,
+}
+
+Route.prototype.matchMethod = function (req) {
+ 	return null === this.method || this.method === req.method.toLowerCase()
+}
+
+Route.prototype.matchUrl = function (req) {
+
+	//console.log('~', item.url, req.url)
+
+	return null === this.url || this.url === req.url
+}
+
+Route.prototype.match = function (req) {
+	return this.matchMethod(req) && this.matchUrl(req)
+}
+
+// -------------------------------------------------------------------------
+
 function Router () {
 
 	[
@@ -8,9 +39,9 @@ function Router () {
 		'delete',
 		// ...
 	].forEach(method => {
-		this[method] = (... args) => {
-			const middleware = args.pop() || null
-			const url = args.pop() || null
+		this[method] = function (... args) {
+			const middleware = args.pop()
+			const url = args.pop()
 			this.use(method, url, middleware)
 		}
 	})
@@ -18,73 +49,50 @@ function Router () {
 }
 
 Router.prototype = {
-
 	routes: [],
+}
 
-	use (... args) {
-		this.routes.push({
-			middleware: args.pop() || null,
-			url: args.pop() || null,
-			method: args.pop() || null,
-		})
-	},
+Router.prototype.use = function (... args) {
+	this.routes.push(new Route(... args))
+}
 
-	matchMethod (item, req) {
-	 	return null === item.method || item.method === req.method.toLowerCase()
-	},
+Router.prototype.matchRoutes = function (req) {
+	return this.routes.filter(route => route.match(req))
+}
 
-	matchUrl (item, req) {
+Router.prototype.match = function (req, res) {
 
-		//console.log('~', item.url, req.url)
+	const routes = this.matchRoutes(req)
 
-		return null === item.url || item.url === req.url
-	},
+	const next = err => {
 
-	matchRoutes (req) {
-
-		const list = []
-
-		this.routes.forEach(item => {
-			if (this.matchMethod(item, req) && this.matchUrl(item, req)) {
-				list.push(item)
-			}
-		})
-
-		return list
-	},
-
-	match (req, res) {
-
-		const list = this.matchRoutes(req)
-
-		const next = err => {
-
-			if (err) {
-				this.http5xx(req, res, err)
-				return
-			}
-
-			const item = list.shift()
-
-			if (item) {
-				item.middleware(req, res, next)
-			}
-			else {
-				this.http404(req, res)
-			}
+		if (err) {
+			this.http5xx(req, res, err)
+			return
 		}
 
-		next()
+		const route = routes.shift()
 
-	},
+		if (route) {
+			route.middleware(req, res, next)
+		}
+		else {
+			this.http404(req, res)
+		}
+	}
 
-	last (middleware) {
-		this.http404 = middleware
-	},
+	next()
 
-	error (middleware) {
-		this.http5xx = middleware
-	},
 }
+
+Router.prototype.last = function (middleware) {
+	this.http404 = middleware
+}
+
+Router.prototype.error = function (middleware) {
+	this.http5xx = middleware
+}
+
+// -------------------------------------------------------------------------
 
 export default Router
