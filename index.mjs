@@ -8,7 +8,7 @@ import Router from './router.mjs'
 function sendJson (req, res, data) {
 
 	res.writeHead(200, {
-	  'Content-Type': 'application/json'
+		'Content-Type': 'application/json'
 	})
 
 	res.end(JSON.stringify(data, false, 2))
@@ -19,7 +19,7 @@ const router = new Router()
 router.last((req, res) => {
 
 	res.writeHead(404, {
-	  'Content-Type': 'text/plain'
+		'Content-Type': 'text/plain'
 	})
 
 	res.end('File Not Found')
@@ -28,7 +28,7 @@ router.last((req, res) => {
 router.error((req, res, err) => {
 
 	res.writeHead(500, {
-	  'Content-Type': 'text/plain'
+		'Content-Type': 'text/plain'
 	})
 
 	res.end(err.toString())
@@ -36,6 +36,7 @@ router.error((req, res, err) => {
 
 // logger
 router.use((req, res, next) => {
+
 	res.on('finish', () => {
 		console.log(
 			req.method,
@@ -53,11 +54,9 @@ router.post((req, res, next) => {
 
 	req.postData = []
 
-	if ('POST' === req.method) {
-		req.on('data', chunk => {
-			req.postData.push(chunk.toString())
-		})
-	}
+	req.on('data', chunk => {
+		req.postData.push(chunk.toString())
+	})
 
 	next()
 })
@@ -71,7 +70,7 @@ router.get('/', (req, res, next) => {
 		}
 
 		res.writeHead(200, {
-		  'Content-Type': 'text/html'
+			'Content-Type': 'text/html'
 		})
 
 		res.end(data)
